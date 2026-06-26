@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Syne:wght@400..800&display=swap');
+@import "tailwindcss";
+  * { font-family:'Inter',sans-serif; }
+    h1,h2,h3,.font-display { font-family:'Syne',sans-serif; }
+    .card-hover { transition: box-shadow .2s, transform .2s; }
+    .card-hover:hover { box-shadow:0 8px 32px rgba(0,0,0,.13); transform:translateY(-3px); }
+    .qty-btn:active { transform:scale(.9); }
+    ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-thumb { background:#aaa; border-radius:9px; }
+    .badge-pulse { animation:pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.55} }
+    .toast-anim { animation:slideUp .35s ease, fadeOut .4s 2.2s forwards; }
+    @keyframes slideUp { from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1} }
+    @keyframes fadeOut { to{opacity:0;pointer-events:none} }
+    /* filter active states handled via JS toggle */
+    .filter-btn { transition: background .18s, color .18s; }
+
+    /* ── theme tokens ── */
+    :root {
+      --bg: #F7F6F3; --surface: #FFFFFF; --surface2: #E8E4DC;
+      --border: #E0DDD6; --text: #0F0F0F; --muted: #7A7570;
+      --nav-bg: rgba(247,246,243,.95);
+    }
+    html.dark {
+      --bg: #111113; --surface: #1C1C1F; --surface2: #27272B;
+      --border: #333337; --text: #F0EFEc; --muted: #9E9A97;
+      --nav-bg: rgba(17,17,19,.95);
+    }
+    body { background: var(--bg); color: var(--text); transition: background .25s, color .25s; }
+    .t-bg     { background: var(--bg); }
+    .t-surface{ background: var(--surface); }
+    .t-surface2{ background: var(--surface2); }
+    .t-border { border-color: var(--border); }
+    .t-text   { color: var(--text); }
+    .t-muted  { color: var(--muted); }
+    .t-nav    { background: var(--nav-bg); }
+    .bg-rust {background-color: #c0572b;}
+    .text-rust {color: #c0572b;}
+
+    /* theme toggle knob */
+    .toggle-track { width:44px;height:24px;border-radius:99px;transition:background .2s; }
+    .toggle-knob  { width:18px;height:18px;border-radius:50%;top:3px;left:3px;transition:transform .2s; }
+    html.dark .toggle-track { background:#C0572B; }
+    html.light .toggle-track { 
+      background:#ccc !important; 
+    }
+    html.dark .toggle-knob  { transform:translateX(20px); }
+
+    /* cart section slide */
+    #cartSection { transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s; overflow:hidden; max-height:0; opacity:0; }
+    #cartSection.open { max-height:2000px; opacity:1; }

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NOVA — Premium Store</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { display: ['Syne','sans-serif'], body: ['Inter','sans-serif'] },
+          colors: { rust: '#C0572B' }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family:'Inter',sans-serif; }
+    h1,h2,h3,.font-display { font-family:'Syne',sans-serif; }
+    .card-hover { transition: box-shadow .2s, transform .2s; }
+    .card-hover:hover { box-shadow:0 8px 32px rgba(0,0,0,.13); transform:translateY(-3px); }
+    .qty-btn:active { transform:scale(.9); }
+    ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-thumb { background:#aaa; border-radius:9px; }
+    .badge-pulse { animation:pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.55} }
+    .toast-anim { animation:slideUp .35s ease, fadeOut .4s 2.2s forwards; }
+    @keyframes slideUp { from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1} }
+    @keyframes fadeOut { to{opacity:0;pointer-events:none} }
+    /* filter active states handled via JS toggle */
+    .filter-btn { transition: background .18s, color .18s; }
+
+    /* ── theme tokens ── */
+    :root {
+      --bg: #F7F6F3; --surface: #FFFFFF; --surface2: #E8E4DC;
+      --border: #E0DDD6; --text: #0F0F0F; --muted: #7A7570;
+      --nav-bg: rgba(247,246,243,.95);
+    }
+    html.dark {
+      --bg: #111113; --surface: #1C1C1F; --surface2: #27272B;
+      --border: #333337; --text: #F0EFEc; --muted: #9E9A97;
+      --nav-bg: rgba(17,17,19,.95);
+    }
+    body { background: var(--bg); color: var(--text); transition: background .25s, color .25s; }
+    .t-bg     { background: var(--bg); }
+    .t-surface{ background: var(--surface); }
+    .t-surface2{ background: var(--surface2); }
+    .t-border { border-color: var(--border); }
+    .t-text   { color: var(--text); }
+    .t-muted  { color: var(--muted); }
+    .t-nav    { background: var(--nav-bg); }
+
+    /* theme toggle knob */
+    .toggle-track { width:44px;height:24px;border-radius:99px;transition:background .2s; }
+    .toggle-knob  { width:18px;height:18px;border-radius:50%;top:3px;left:3px;transition:transform .2s; }
+    html.dark .toggle-track { background:#C0572B; }
+    html.light .toggle-track { background:#ccc; }
+    html.dark .toggle-knob  { transform:translateX(20px); }
+
+    /* cart section slide */
+    #cartSection { transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s; overflow:hidden; max-height:0; opacity:0; }
+    #cartSection.open { max-height:2000px; opacity:1; }
+  </style>
+</head>
+
+<body class="antialiased">
+
+<!-- ═══ NAVBAR ═══ -->
+<header class="t-nav sticky top-0 z-40 backdrop-blur border-b t-border">
+  <div class="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
+
+    <a href="#" class="font-display text-2xl font-extrabold tracking-tight t-text">NOVA</a>
+
+    <div class="hidden md:flex flex-1 max-w-sm mx-8 relative">
+      <input id="searchInput" type="text" placeholder="Search products…"
+        class="w-full t-surface2 t-border border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 placeholder:text-[var(--muted)] t-text"
+        oninput="filterProducts()"/>
+      <svg class="absolute right-3 top-2.5 w-4 h-4 t-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+      </svg>
+    </div>
+
+    <div class="flex items-center gap-4">
+
+      <!-- Dark/Light toggle -->
+      <button onclick="toggleTheme()" title="Toggle theme" class="flex items-center gap-2 text-xs t-muted">
+        <span id="themeIcon">🌙</span>
+        <div class="relative toggle-track">
+          <div class="absolute toggle-knob bg-white shadow"></div>
+        </div>
+      </button>
+
+      <!-- Wishlist -->
+      <button class="hidden sm:flex t-muted hover:text-[var(--text)] transition-colors" title="Wishlist">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.682l1.318-1.364a4.5 4.5 0 016.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/>
+        </svg>
+      </button>
+
+      <!-- Cart button -->
+      <button onclick="toggleCart()" class="relative flex items-center gap-2 bg-[var(--text)] text-[var(--bg)] px-4 py-2 rounded-full text-sm font-semibold hover:opacity-80 transition-opacity">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        Cart
+        <span id="cartCount" class="bg-rust text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold badge-pulse hidden">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile search -->
+  <div class="md:hidden px-5 pb-3">
+    <input id="searchInputMob" type="text" placeholder="Search products…"
+      class="w-full t-surface2 t-border border rounded-full px-4 py-2 text-sm focus:outline-none placeholder:text-[var(--muted)] t-text"
+      oninput="filterProductsMob()"/>
+  </div>
+</header>
+
+<!-- ═══ HERO ═══ -->
+<section class="bg-[#0F0F0F] text-white overflow-hidden">
+  <div class="max-w-7xl mx-auto px-5 py-20 md:py-28 flex flex-col md:flex-row items-center gap-10">
+    <div class="flex-1 space-y-6">
+      <span class="inline-block text-xs tracking-widest uppercase text-rust font-display font-semibold">New Season Drop</span>
+      <h1 class="font-display text-5xl md:text-7xl font-extrabold leading-none">Designed<br/>for the<br/><em class="not-italic text-rust">Bold.</em></h1>
+      <p class="text-white/50 text-base max-w-sm leading-relaxed">Curated essentials that balance form, function, and a restless desire to stand apart.</p>
+      <div class="flex gap-3 flex-wrap">
+        <a href="#products" class="bg-rust text-white px-7 py-3 rounded-full font-display font-semibold text-sm hover:opacity-90 transition-opacity">Shop Now</a>
+        <a href="#" class="border border-white/20 text-white px-7 py-3 rounded-full font-display font-semibold text-sm hover:bg-white/10 transition-colors">View Lookbook</a>
+      </div>
+    </div>
+    <div class="flex-1 flex justify-center gap-4">
+      <div class="w-44 h-64 bg-white/8 rounded-2xl flex items-center justify-center text-6xl shadow-2xl -rotate-3">👟</div>
+      <div class="w-44 h-64 bg-rust/25 rounded-2xl flex items-center justify-center text-6xl shadow-2xl mt-8 rotate-3">🎒</div>
+    </div>
+  </div>
+  <div class="border-t border-white/10">
+    <div class="max-w-7xl mx-auto px-5 py-5 flex gap-8 overflow-x-auto text-sm text-white/40">
+      <div><span class="font-display font-bold text-white text-xl">12k+</span> Happy Customers</div>
+      <div class="h-8 w-px bg-white/10"></div>
+      <div><span class="font-display font-bold text-white text-xl">500+</span> Products</div>
+      <div class="h-8 w-px bg-white/10"></div>
+      <div><span class="font-display font-bold text-white text-xl">4.9★</span> Avg Rating</div>
+      <div class="h-8 w-px bg-white/10"></div>
+      <div><span class="font-display font-bold text-white text-xl">Free</span> Shipping ₹999+</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CART SECTION (inline, below hero) ═══ -->
+<div id="cartSection" class="t-bg border-b t-border">
+  <div class="max-w-7xl mx-auto px-5 py-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="font-display text-2xl font-bold t-text">Your Cart <span id="drawerCount" class="text-sm font-normal t-muted"></span></h2>
+      <button onclick="toggleCart()" class="t-muted hover:text-[var(--text)] transition-colors text-sm flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        Close
+      </button>
+    </div>
+
+    <!-- empty -->
+    <div id="cartEmpty" class="text-center py-10 space-y-3">
+      <div class="text-5xl">🛍️</div>
+      <p class="font-display text-lg font-bold t-text">Your cart is empty</p>
+      <p class="t-muted text-sm">Add items below to get started.</p>
+    </div>
+
+    <!-- items + summary side by side -->
+    <div id="cartBody" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- items list -->
+      <div id="cartItems" class="lg:col-span-2 space-y-3"></div>
+
+      <!-- order summary -->
+      <div class="t-surface rounded-2xl border t-border p-5 h-fit space-y-4">
+        <h3 class="font-display font-bold text-lg t-text">Order Summary</h3>
+        <div class="space-y-2 text-sm t-muted">
+          <div class="flex justify-between"><span>Subtotal</span><span id="subtotal" class="t-text">₹0</span></div>
+          <div class="flex justify-between"><span>Shipping</span><span id="shippingCost" class="text-green-500 font-semibold">Free</span></div>
+          <div class="flex justify-between"><span>Tax (18%)</span><span id="taxAmt" class="t-text">₹0</span></div>
+        </div>
+        <div class="border-t t-border pt-3 flex justify-between font-display font-bold text-lg t-text">
+          <span>Total</span><span id="cartTotal">₹0</span>
+        </div>
+        <div class="space-y-2 pt-1">
+          <input type="text" placeholder="Promo code" class="w-full t-surface2 t-border border rounded-lg px-3 py-2 text-sm focus:outline-none t-text placeholder:text-[var(--muted)]"/>
+          <button onclick="checkout()" class="w-full bg-rust text-white py-3 rounded-full font-display font-bold text-sm hover:opacity-90 transition-opacity">Checkout →</button>
+          <button onclick="clearCart()" class="w-full t-muted text-xs hover:text-rust transition-colors py-1">Clear Cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FILTERS ═══ -->
+<section class="max-w-7xl mx-auto px-5 py-8">
+  <div class="flex gap-3 overflow-x-auto pb-2">
+    <button onclick="setFilter('all')"         class="filter-btn whitespace-nowrap px-5 py-2 rounded-full border t-border text-sm font-medium t-text" data-filter="all">All Products</button>
+    <button onclick="setFilter('footwear')"    class="filter-btn whitespace-nowrap px-5 py-2 rounded-full border t-border text-sm font-medium t-text" data-filter="footwear">👟 Footwear</button>
+    <button onclick="setFilter('bags')"        class="filter-btn whitespace-nowrap px-5 py-2 rounded-full border t-border text-sm font-medium t-text" data-filter="bags">🎒 Bags</button>
+    <button onclick="setFilter('apparel')"     class="filter-btn whitespace-nowrap px-5 py-2 rounded-full border t-border text-sm font-medium t-text" data-filter="apparel">👕 Apparel</button>
+    <button onclick="setFilter('accessories')" class="filter-btn whitespace-nowrap px-5 py-2 rounded-full border t-border text-sm font-medium t-text" data-filter="accessories">⌚ Accessories</button>
+    <button onclick="setFilter('sale')"        class="filter-btn whitespace-nowrap px-5 py-2 rounded-full border t-border text-sm font-medium t-text" data-filter="sale">🔥 On Sale</button>
+  </div>
+</section>
+
+<!-- ═══ PRODUCTS ═══ -->
+<main id="products" class="max-w-7xl mx-auto px-5 pb-20">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="font-display text-3xl font-bold t-text">Products <span id="resultCount" class="text-base font-normal t-muted ml-1"></span></h2>
+    <select class="t-surface2 t-border border rounded-lg px-3 py-2 text-sm focus:outline-none t-text">
+      <option>Sort: Featured</option>
+      <option>Price: Low → High</option>
+      <option>Price: High → Low</option>
+      <option>Newest</option>
+    </select>
+  </div>
+  <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
+  <p id="emptyMsg" class="hidden text-center t-muted py-20 text-lg">No products found. Try a different search.</p>
+</main>
+
+<!-- ═══ PROMO ═══ -->
+<section class="bg-rust text-white py-14 px-5">
+  <div class="max-w-4xl mx-auto text-center space-y-4">
+    <p class="text-sm tracking-widest uppercase font-display opacity-70">Limited Time</p>
+    <h2 class="font-display text-4xl md:text-5xl font-extrabold">Extra 20% off sitewide.<br/>Use <span class="underline underline-offset-4">NOVA20</span></h2>
+    <p class="text-white/60 text-sm">Valid through Sunday · No minimum order</p>
+    <button onclick="this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Code',2000)"
+      class="mt-4 bg-white text-rust px-8 py-3 rounded-full font-display font-bold text-sm hover:opacity-90 transition-opacity">Copy Code</button>
+  </div>
+</section>
+
+<!-- ═══ FEATURES ═══ -->
+<section class="max-w-7xl mx-auto px-5 py-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+  <div class="space-y-2"><div class="text-3xl">🚚</div><p class="font-display font-bold t-text">Free Shipping</p><p class="t-muted text-sm">Orders above ₹999</p></div>
+  <div class="space-y-2"><div class="text-3xl">↩️</div><p class="font-display font-bold t-text">Easy Returns</p><p class="t-muted text-sm">30-day hassle-free</p></div>
+  <div class="space-y-2"><div class="text-3xl">🔒</div><p class="font-display font-bold t-text">Secure Pay</p><p class="t-muted text-sm">SSL encrypted checkout</p></div>
+  <div class="space-y-2"><div class="text-3xl">💬</div><p class="font-display font-bold t-text">24/7 Support</p><p class="t-muted text-sm">Chat, email or call</p></div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="bg-[#0F0F0F] text-white/60 py-14 px-5">
+  <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
+    <div class="col-span-2 md:col-span-1">
+      <p class="font-display text-2xl text-white font-extrabold mb-3">NOVA</p>
+      <p class="text-sm leading-relaxed">Curated products for people who choose intentionally.</p>
+    </div>
+    <div><p class="font-display text-white font-bold mb-4">Shop</p>
+      <ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-white transition-colors">New Arrivals</a></li><li><a href="#" class="hover:text-white transition-colors">Best Sellers</a></li><li><a href="#" class="hover:text-white transition-colors">Sale</a></li><li><a href="#" class="hover:text-white transition-colors">Collections</a></li></ul>
+    </div>
+    <div><p class="font-display text-white font-bold mb-4">Help</p>
+      <ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-white transition-colors">Shipping Info</a></li><li><a href="#" class="hover:text-white transition-colors">Returns</a></li><li><a href="#" class="hover:text-white transition-colors">Size Guide</a></li><li><a href="#" class="hover:text-white transition-colors">Contact Us</a></li></ul>
+    </div>
+    <div><p class="font-display text-white font-bold mb-4">Follow</p>
+      <ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-white transition-colors">Instagram</a></li><li><a href="#" class="hover:text-white transition-colors">Twitter / X</a></li><li><a href="#" class="hover:text-white transition-colors">Pinterest</a></li><li><a href="#" class="hover:text-white transition-colors">YouTube</a></li></ul>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto mt-12 pt-6 border-t border-white/10 text-xs text-white/30 flex flex-wrap gap-4 justify-between">
+    <p>© 2026 NOVA. All rights reserved.</p>
+    <div class="flex gap-4"><a href="#" class="hover:text-white/60">Privacy</a><a href="#" class="hover:text-white/60">Terms</a><a href="#" class="hover:text-white/60">Cookies</a></div>
+  </div>
+</footer>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] hidden pointer-events-none">
+  <div class="toast-anim bg-[#0F0F0F] text-white px-5 py-3 rounded-full text-sm font-medium flex items-center gap-2 shadow-xl">
+    <span>✓</span><span id="toastMsg">Added to cart</span>
+  </div>
+</div>
+
+<!-- ═══ JS ═══ -->
+<script>
+/* ── DATA ── */
+const products = [
+  {id:1, name:'Runner X Pro',       category:'footwear',    emoji:'👟', price:2999, oldPrice:3999, badge:'Sale', rating:4.8, reviews:124},
+  {id:2, name:'Canvas Low',         category:'footwear',    emoji:'👠', price:1899, oldPrice:null,  badge:'New',  rating:4.5, reviews:87},
+  {id:3, name:'Trail Grip Boot',    category:'footwear',    emoji:'🥾', price:3499, oldPrice:4299, badge:'Sale', rating:4.7, reviews:203},
+  {id:4, name:'Urban Slide',        category:'footwear',    emoji:'🩴', price:999,  oldPrice:null,  badge:null,   rating:4.2, reviews:55},
+  {id:5, name:'Daypack 22L',        category:'bags',        emoji:'🎒', price:2499, oldPrice:2999, badge:'Sale', rating:4.9, reviews:312},
+  {id:6, name:'Mini Crossbody',     category:'bags',        emoji:'👜', price:1599, oldPrice:null,  badge:'New',  rating:4.6, reviews:91},
+  {id:7, name:'Tote Canvas',        category:'bags',        emoji:'🛍️', price:1199, oldPrice:null,  badge:null,   rating:4.3, reviews:68},
+  {id:8, name:'Laptop Sleeve 15"',  category:'bags',        emoji:'💼', price:799,  oldPrice:1099, badge:'Sale', rating:4.4, reviews:145},
+  {id:9, name:'Oversized Tee',      category:'apparel',     emoji:'👕', price:899,  oldPrice:null,  badge:'New',  rating:4.7, reviews:234},
+  {id:10,name:'Cargo Jogger',       category:'apparel',     emoji:'👖', price:1799, oldPrice:2299, badge:'Sale', rating:4.5, reviews:178},
+  {id:11,name:'Hooded Sweat',       category:'apparel',     emoji:'🧥', price:2299, oldPrice:null,  badge:null,   rating:4.8, reviews:309},
+  {id:12,name:'Linen Shirt',        category:'apparel',     emoji:'👔', price:1499, oldPrice:1899, badge:'Sale', rating:4.4, reviews:102},
+  {id:13,name:'Minimal Watch',      category:'accessories', emoji:'⌚', price:4999, oldPrice:5999, badge:'Sale', rating:4.9, reviews:421},
+  {id:14,name:'Leather Wallet',     category:'accessories', emoji:'👛', price:1299, oldPrice:null,  badge:'New',  rating:4.6, reviews:167},
+  {id:15,name:'Knit Beanie',        category:'accessories', emoji:'🧢', price:599,  oldPrice:799,  badge:'Sale', rating:4.3, reviews:89},
+  {id:16,name:'Sunglasses Classic', category:'accessories', emoji:'🕶️', price:1799, oldPrice:null,  badge:null,   rating:4.7, reviews:213},
+];
+
+let cart = {}, currentFilter = 'all', searchTerm = '', cartOpen = false;
+
+/* ── THEME ── */
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.classList.toggle('dark');
+  html.classList.toggle('light', !isDark);
+  document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
+  // re-apply active filter styles
+  applyFilterStyles();
+}
+
+/* ── FILTER ── */
+function setFilter(cat) {
+  currentFilter = cat;
+  applyFilterStyles();
+  renderProducts();
+}
+function applyFilterStyles() {
+  const isDark = document.documentElement.classList.contains('dark');
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    const active = b.dataset.filter === currentFilter;
+    b.style.background = active ? 'var(--text)' : '';
+    b.style.color = active ? 'var(--bg)' : 'var(--text)';
+    b.style.borderColor = active ? 'var(--text)' : 'var(--border)';
+  });
+}
+function filterProducts()    { searchTerm = document.getElementById('searchInput').value.toLowerCase();    renderProducts(); }
+function filterProductsMob() { searchTerm = document.getElementById('searchInputMob').value.toLowerCase(); renderProducts(); }
+function getFiltered() {
+  return products.filter(p => {
+    const catOk = currentFilter==='all' || (currentFilter==='sale' ? p.badge==='Sale' : p.category===currentFilter);
+    return catOk && (p.name.toLowerCase().includes(searchTerm) || p.category.includes(searchTerm));
+  });
+}
+
+/* ── RENDER PRODUCTS ── */
+function renderProducts() {
+  const list = getFiltered();
+  const grid = document.getElementById('productGrid');
+  const emptyEl = document.getElementById('emptyMsg');
+  document.getElementById('resultCount').textContent = `(${list.length})`;
+  grid.innerHTML = '';
+  if (!list.length) { emptyEl.classList.remove('hidden'); return; }
+  emptyEl.classList.add('hidden');
+
+  list.forEach(p => {
+    const inCart = cart[p.id]?.qty || 0;
+    const stars = '★'.repeat(Math.floor(p.rating)) + (p.rating%1>=.5?'½':'');
+    const badge = p.badge
+      ? `<span class="absolute top-3 left-3 text-xs font-bold px-2.5 py-0.5 rounded-full ${p.badge==='Sale'?'bg-rust text-white':'bg-[var(--text)] text-[var(--bg)]'}">${p.badge}</span>`
+      : '';
+    const oldP = p.oldPrice ? `<span class="line-through text-xs t-muted">₹${p.oldPrice.toLocaleString()}</span>` : '';
+
+    grid.innerHTML += `
+    <div class="card-hover t-surface rounded-2xl overflow-hidden border t-border flex flex-col">
+      <div class="relative t-surface2 h-48 flex items-center justify-center text-6xl select-none">
+        ${badge}
+        <span>${p.emoji}</span>
+        <button onclick="toggleWish(${p.id},this)" class="wish-btn absolute top-3 right-3 w-8 h-8 t-surface rounded-full flex items-center justify-center shadow t-muted hover:text-rust transition-colors text-base">♡</button>
+      </div>
+      <div class="p-4 flex flex-col flex-1 gap-2">
+        <p class="text-xs t-muted capitalize">${p.category}</p>
+        <h3 class="font-display font-bold text-base leading-tight t-text">${p.name}</h3>
+        <div class="flex items-center gap-1 text-xs text-amber-500">
+          <span>${stars}</span><span class="t-muted">(${p.reviews})</span>
+        </div>
+        <div class="flex items-center gap-2 mt-auto">
+          <span class="font-display font-extrabold text-lg t-text">₹${p.price.toLocaleString()}</span>
+          ${oldP}
+        </div>
+        ${inCart > 0
+          ? `<div class="flex items-center gap-2 mt-1">
+               <button onclick="changeQty(${p.id},-1)" class="qty-btn w-8 h-8 t-surface2 rounded-full text-lg font-bold t-text hover:bg-[var(--text)] hover:text-[var(--bg)] transition-colors">−</button>
+               <span class="font-bold w-6 text-center t-text">${inCart}</span>
+               <button onclick="changeQty(${p.id},1)"  class="qty-btn w-8 h-8 t-surface2 rounded-full text-lg font-bold t-text hover:bg-[var(--text)] hover:text-[var(--bg)] transition-colors">+</button>
+               <span class="text-xs t-muted">in cart</span>
+             </div>`
+          : `<button onclick="addToCart(${p.id})" class="mt-1 w-full bg-[var(--text)] text-[var(--bg)] py-2.5 rounded-full text-sm font-display font-bold hover:opacity-80 transition-opacity">Add to Cart</button>`
+        }
+      </div>
+    </div>`;
+  });
+}
+
+/* ── WISHLIST ── */
+function toggleWish(id, btn) {
+  const on = btn.textContent.trim() === '♥';
+  btn.textContent = on ? '♡' : '♥';
+  btn.classList.toggle('text-rust', !on);
+}
+
+/* ── CART LOGIC ── */
+function addToCart(id) {
+  cart[id] = cart[id] || { ...products.find(p=>p.id===id), qty:0 };
+  cart[id].qty++;
+  updateCartUI();
+  showToast(`${cart[id].name} added ✓`);
+  renderProducts();
+  // auto-open cart
+  if (!cartOpen) toggleCart();
+  else renderCartItems();
+}
+function changeQty(id, delta) {
+  if (!cart[id]) return;
+  cart[id].qty = Math.max(0, cart[id].qty + delta);
+  if (cart[id].qty === 0) delete cart[id];
+  updateCartUI(); renderProducts(); renderCartItems();
+}
+function clearCart() {
+  cart = {}; updateCartUI(); renderProducts(); renderCartItems();
+}
+function updateCartUI() {
+  const total = Object.values(cart).reduce((s,i)=>s+i.qty,0);
+  const el = document.getElementById('cartCount');
+  el.textContent = total;
+  el.classList.toggle('hidden', total===0);
+}
+
+/* ── CART SECTION TOGGLE ── */
+function toggleCart() {
+  const sec = document.getElementById('cartSection');
+  cartOpen = !cartOpen;
+  sec.classList.toggle('open', cartOpen);
+  if (cartOpen) {
+    renderCartItems();
+    setTimeout(()=>sec.scrollIntoView({behavior:'smooth', block:'start'}), 80);
+  }
+}
+
+/* ── RENDER CART ITEMS ── */
+function renderCartItems() {
+  const items = Object.values(cart);
+  const emptyEl  = document.getElementById('cartEmpty');
+  const bodyEl   = document.getElementById('cartBody');
+  const itemsEl  = document.getElementById('cartItems');
+  const countEl  = document.getElementById('drawerCount');
+
+  if (!items.length) {
+    emptyEl.classList.remove('hidden');
+    bodyEl.classList.add('hidden');
+    countEl.textContent = '';
+    return;
+  }
+  emptyEl.classList.add('hidden');
+  bodyEl.classList.remove('hidden');
+  countEl.textContent = `(${items.reduce((s,i)=>s+i.qty,0)} items)`;
+
+  itemsEl.innerHTML = items.map(item=>`
+    <div class="flex gap-4 t-surface2 rounded-xl p-4 items-center">
+      <div class="w-16 h-16 t-surface rounded-xl flex items-center justify-center text-3xl shrink-0 border t-border">${item.emoji}</div>
+      <div class="flex-1 min-w-0">
+        <p class="font-display font-bold text-sm t-text truncate">${item.name}</p>
+        <p class="text-xs t-muted capitalize mt-0.5">${item.category}</p>
+        <div class="flex items-center gap-2 mt-2">
+          <button onclick="changeQty(${item.id},-1)" class="qty-btn w-7 h-7 t-surface border t-border rounded-full text-base font-bold t-text hover:bg-[var(--text)] hover:text-[var(--bg)] transition-colors shadow-sm">−</button>
+          <span class="font-bold text-sm w-5 text-center t-text">${item.qty}</span>
+          <button onclick="changeQty(${item.id},1)"  class="qty-btn w-7 h-7 t-surface border t-border rounded-full text-base font-bold t-text hover:bg-[var(--text)] hover:text-[var(--bg)] transition-colors shadow-sm">+</button>
+        </div>
+      </div>
+      <div class="text-right flex flex-col gap-2 justify-between items-end">
+        <button onclick="changeQty(${item.id},-${item.qty})" class="t-muted hover:text-rust transition-colors text-xs">✕ Remove</button>
+        <p class="font-display font-bold t-text">₹${(item.price*item.qty).toLocaleString()}</p>
+      </div>
+    </div>`).join('');
+
+  const sub      = items.reduce((s,i)=>s+i.price*i.qty,0);
+  const shipping = sub>=999 ? 0 : 99;
+  const tax      = Math.round(sub*0.18);
+  document.getElementById('subtotal').textContent    = `₹${sub.toLocaleString()}`;
+  document.getElementById('shippingCost').textContent = shipping===0?'Free':`₹${shipping}`;
+  document.getElementById('taxAmt').textContent       = `₹${tax.toLocaleString()}`;
+  document.getElementById('cartTotal').textContent    = `₹${(sub+shipping+tax).toLocaleString()}`;
+}
+
+/* ── TOAST ── */
+let toastTO;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(toastTO);
+  toastTO = setTimeout(()=>t.classList.add('hidden'), 2700);
+}
+
+/* ── CHECKOUT ── */
+function checkout() {
+  clearCart(); toggleCart();
+  showToast('🎉 Order placed! Thank you.');
+}
+
+/* ── INIT ── */
+applyFilterStyles();
+renderProducts();
+</script>
+</body>
+</html>
